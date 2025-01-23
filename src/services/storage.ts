@@ -20,11 +20,11 @@ export function loadAssistants(): Assistant[] {
 }
 
 export function saveAgentFlows(flows: AgentFlow[]): void {
-  localStorage.setItem("agentFlows", JSON.stringify(flows));
+  localStorage.setItem(STORAGE_KEYS.AGENT_FLOWS, JSON.stringify(flows));
 }
 
 export function loadAgentFlows(): AgentFlow[] {
-  const flows = localStorage.getItem("agentFlows");
+  const flows = localStorage.getItem(STORAGE_KEYS.AGENT_FLOWS);
   return flows ? JSON.parse(flows) : [];
 }
 

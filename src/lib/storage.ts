@@ -3,6 +3,7 @@ export const STORAGE_KEYS = {
   ASSISTANTS: "assistants",
   API_KEY: "apiKey",
   SETTINGS: "settings",
+  AGENT_FLOWS: "agentFlows",
 } as const;
 
 export function saveToStorage<T>(key: string, data: T): void {

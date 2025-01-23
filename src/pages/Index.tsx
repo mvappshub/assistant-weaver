@@ -4,6 +4,7 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ModelSelect } from "@/components/ModelSelect";
 import { AssistantManager } from "@/components/AssistantManager";
+import { AgentFlowManager } from "@/components/AgentFlowManager";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,6 +17,8 @@ import {
   saveApiKeys,
   loadAssistants,
   saveAssistants,
+  loadAgentFlows,
+  saveAgentFlows,
 } from "@/services/storage";
 
 export default function Index() {
@@ -24,12 +27,15 @@ export default function Index() {
   const [apiKeys, setApiKeys] = useState<ApiKeys>(loadApiKeys());
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
+  const [flows, setFlows] = useState<AgentFlow[]>([]);
+  const [selectedFlow, setSelectedFlow] = useState<AgentFlow | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     setMessages(loadMessages());
     setAssistants(loadAssistants());
+    setFlows(loadAgentFlows());
   }, []);
 
   useEffect(() => {
@@ -48,7 +54,62 @@ export default function Index() {
     }
   }, [assistants]);
 
+  useEffect(() => {
+    if (flows.length > 0) {
+      saveAgentFlows(flows);
+    }
+  }, [flows]);
+
+  const processAgentFlow = async (message: string, flow: AgentFlow) => {
+    let currentMessage = message;
+    
+    for (const agentId of flow.agents) {
+      const agent = assistants.find(a => a.id === agentId);
+      if (!agent) continue;
+
+      const newMessage: Message = {
+        role: "user",
+        content: currentMessage,
+        agentName: agent.name
+      };
+      setMessages(prev => [...prev, newMessage]);
+
+      try {
+        const response = await generateResponse(
+          currentMessage,
+          agent.model,
+          apiKeys[agent.model as ModelProvider] || "",
+          agent.systemPrompt
+        );
+
+        const assistantMessage: Message = {
+          role: "assistant",
+          content: response,
+          agentName: agent.name
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        
+        currentMessage = response;
+      } catch (error) {
+        toast({
+          title: "Chyba při komunikaci",
+          description: `Nepodařilo se získat odpověď od agenta ${agent.name}.`,
+          variant: "destructive",
+        });
+        console.error("Error generating response:", error);
+        break;
+      }
+    }
+  };
+
   const handleSend = async (message: string) => {
+    if (selectedFlow) {
+      setIsProcessing(true);
+      await processAgentFlow(message, selectedFlow);
+      setIsProcessing(false);
+      return;
+    }
+
     const currentApiKey = apiKeys[selectedModel];
     
     if (!currentApiKey) {
@@ -109,6 +170,7 @@ export default function Index() {
   const handleAssistantSelect = (assistant: Assistant) => {
     setSelectedAssistant(assistant);
     setSelectedModel(assistant.model as ModelProvider);
+    setSelectedFlow(null);
   };
 
   const handleAssistantCreate = (assistant: Assistant) => {
@@ -126,6 +188,22 @@ export default function Index() {
     if (selectedAssistant?.id === assistantId) {
       setSelectedAssistant(null);
     }
+  };
+
+  const handleFlowCreate = (flow: AgentFlow) => {
+    setFlows(prev => [...prev, flow]);
+  };
+
+  const handleFlowDelete = (flowId: string) => {
+    setFlows(prev => prev.filter(f => f.id !== flowId));
+    if (selectedFlow?.id === flowId) {
+      setSelectedFlow(null);
+    }
+  };
+
+  const handleFlowSelect = (flow: AgentFlow) => {
+    setSelectedFlow(flow);
+    setSelectedAssistant(null);
   };
 
   return (
@@ -150,10 +228,12 @@ export default function Index() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
             <div className="space-y-4">
-              {selectedAssistant && (
+              {(selectedAssistant || selectedFlow) && (
                 <div className="bg-secondary/20 p-4 rounded-lg">
                   <p className="text-sm font-medium">
-                    Aktivní asistent: {selectedAssistant.name}
+                    {selectedFlow 
+                      ? `Aktivní flow: ${selectedFlow.name}`
+                      : `Aktivní asistent: ${selectedAssistant?.name}`}
                   </p>
                 </div>
               )}
@@ -173,6 +253,14 @@ export default function Index() {
               onUpdate={handleAssistantUpdate}
               onDelete={handleAssistantDelete}
               selectedAssistant={selectedAssistant}
+            />
+            <AgentFlowManager
+              assistants={assistants}
+              flows={flows}
+              onCreateFlow={handleFlowCreate}
+              onDeleteFlow={handleFlowDelete}
+              onSelectFlow={handleFlowSelect}
+              selectedFlow={selectedFlow}
             />
           </div>
         </div>
