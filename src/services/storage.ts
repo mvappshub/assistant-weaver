@@ -29,10 +29,25 @@ export function loadAgentFlows(): AgentFlow[] {
 }
 
 export function saveApiKeys(keys: ApiKeys): void {
-  localStorage.setItem(STORAGE_KEYS.API_KEY, JSON.stringify(keys));
+  try {
+    const sanitizedKeys: ApiKeys = {};
+    for (const [key, value] of Object.entries(keys)) {
+      if (value && typeof value === 'string') {
+        sanitizedKeys[key as keyof ApiKeys] = value.trim();
+      }
+    }
+    localStorage.setItem(STORAGE_KEYS.API_KEY, JSON.stringify(sanitizedKeys));
+  } catch (error) {
+    console.error("Error saving API keys:", error);
+  }
 }
 
 export function loadApiKeys(): ApiKeys {
-  const keys = localStorage.getItem(STORAGE_KEYS.API_KEY);
-  return keys ? JSON.parse(keys) : {};
+  try {
+    const keys = localStorage.getItem(STORAGE_KEYS.API_KEY);
+    return keys ? JSON.parse(keys) : {};
+  } catch (error) {
+    console.error("Error loading API keys:", error);
+    return {};
+  }
 }

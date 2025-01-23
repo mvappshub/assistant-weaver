@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ModelSelect } from "@/components/ModelSelect";
-import { Assistant } from "@/types";
+import { Assistant, ModelProvider } from "@/types";
 import { saveAssistants, loadAssistants } from "@/services/storage";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
@@ -12,7 +12,7 @@ export function AssistantManager() {
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
-  const [model, setModel] = useState("gemini-pro");
+  const [model, setModel] = useState<ModelProvider>("gemini-pro");
   const [systemPrompt, setSystemPrompt] = useState("");
 
   useEffect(() => {
