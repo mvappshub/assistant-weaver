@@ -8,16 +8,27 @@ import { saveAssistants, loadAssistants } from "@/services/storage";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
-export function AssistantManager() {
-  const [assistants, setAssistants] = useState<Assistant[]>([]);
+interface AssistantManagerProps {
+  assistants: Assistant[];
+  onSelect: (assistant: Assistant) => void;
+  onCreate: (assistant: Assistant) => void;
+  onUpdate: (updatedAssistant: Assistant) => void;
+  onDelete: (assistantId: string) => void;
+  selectedAssistant: Assistant | null;
+}
+
+export function AssistantManager({
+  assistants,
+  onSelect,
+  onCreate,
+  onUpdate,
+  onDelete,
+  selectedAssistant
+}: AssistantManagerProps) {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [model, setModel] = useState<ModelProvider>("gemini-pro");
   const [systemPrompt, setSystemPrompt] = useState("");
-
-  useEffect(() => {
-    setAssistants(loadAssistants());
-  }, []);
 
   const handleAddAssistant = () => {
     if (!name || !role) {
@@ -37,9 +48,7 @@ export function AssistantManager() {
       systemPrompt,
     };
 
-    const updatedAssistants = [...assistants, newAssistant];
-    setAssistants(updatedAssistants);
-    saveAssistants(updatedAssistants);
+    onCreate(newAssistant);
 
     setName("");
     setRole("");
@@ -48,17 +57,6 @@ export function AssistantManager() {
     toast({
       title: "Asistent vytvořen",
       description: `Asistent ${name} byl úspěšně vytvořen.`,
-    });
-  };
-
-  const handleDeleteAssistant = (id: string) => {
-    const updatedAssistants = assistants.filter((a) => a.id !== id);
-    setAssistants(updatedAssistants);
-    saveAssistants(updatedAssistants);
-
-    toast({
-      title: "Asistent smazán",
-      description: "Asistent byl úspěšně odstraněn.",
     });
   };
 
@@ -94,6 +92,9 @@ export function AssistantManager() {
           <div
             key={assistant.id}
             className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg"
+            onClick={() => onSelect(assistant)}
+            role="button"
+            tabIndex={0}
           >
             <div>
               <h3 className="font-medium">{assistant.name}</h3>
@@ -102,7 +103,10 @@ export function AssistantManager() {
             <Button
               variant="destructive"
               size="icon"
-              onClick={() => handleDeleteAssistant(assistant.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(assistant.id);
+              }}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
