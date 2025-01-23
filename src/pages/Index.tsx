@@ -5,9 +5,10 @@ import { ChatInput } from "@/components/ChatInput";
 import { ModelSelect } from "@/components/ModelSelect";
 import { AssistantManager } from "@/components/AssistantManager";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input"; // Add this import
 import { Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { Message, Assistant, AgentFlow } from "@/types";
+import { Message, Assistant, AgentFlow, ModelProvider } from "@/types";
 import { generateResponse } from "@/services/ai";
 import {
   saveMessages,
@@ -19,7 +20,7 @@ import {
 
 export default function Index() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [selectedModel, setSelectedModel] = useState("gemini-pro");
+  const [selectedModel, setSelectedModel] = useState<ModelProvider>("gemini-pro"); // Fix the type here
   const [apiKey, setApiKey] = useState(loadApiKey());
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
