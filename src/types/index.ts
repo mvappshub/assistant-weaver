@@ -19,3 +19,8 @@ export interface AgentFlow {
 }
 
 export type ModelProvider = "gemini-pro" | "deepseek-chat";
+
+export interface ApiKeys {
+  "gemini-pro"?: string;
+  "deepseek-chat"?: string;
+}

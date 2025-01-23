@@ -5,23 +5,23 @@ import { ChatInput } from "@/components/ChatInput";
 import { ModelSelect } from "@/components/ModelSelect";
 import { AssistantManager } from "@/components/AssistantManager";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Add this import
+import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { Message, Assistant, AgentFlow, ModelProvider } from "@/types";
+import { Message, Assistant, AgentFlow, ModelProvider, ApiKeys } from "@/types";
 import { generateResponse } from "@/services/ai";
 import {
   saveMessages,
   loadMessages,
-  loadApiKey,
-  saveApiKey,
+  loadApiKeys,
+  saveApiKeys,
   loadAssistants,
 } from "@/services/storage";
 
 export default function Index() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [selectedModel, setSelectedModel] = useState<ModelProvider>("gemini-pro"); // Fix the type here
-  const [apiKey, setApiKey] = useState(loadApiKey());
+  const [selectedModel, setSelectedModel] = useState<ModelProvider>("gemini-pro");
+  const [apiKeys, setApiKeys] = useState<ApiKeys>(loadApiKeys());
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -36,16 +36,18 @@ export default function Index() {
   }, [messages]);
 
   useEffect(() => {
-    if (apiKey) {
-      saveApiKey(apiKey);
+    if (Object.keys(apiKeys).length > 0) {
+      saveApiKeys(apiKeys);
     }
-  }, [apiKey]);
+  }, [apiKeys]);
 
   const handleSend = async (message: string) => {
-    if (!apiKey) {
+    const currentApiKey = apiKeys[selectedModel];
+    
+    if (!currentApiKey) {
       toast({
         title: "API klíč není nastaven",
-        description: "Prosím nastavte API klíč pro zvoleného poskytovatele.",
+        description: `Prosím nastavte API klíč pro model ${selectedModel}.`,
         variant: "destructive",
       });
       return;
@@ -56,7 +58,7 @@ export default function Index() {
     setIsProcessing(true);
 
     try {
-      const response = await generateResponse(message, selectedModel, apiKey);
+      const response = await generateResponse(message, selectedModel, currentApiKey);
       const assistantMessage: Message = {
         role: "assistant",
         content: response,
@@ -75,17 +77,24 @@ export default function Index() {
     }
   };
 
+  const handleApiKeyChange = (value: string) => {
+    setApiKeys(prev => ({
+      ...prev,
+      [selectedModel]: value
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="fixed top-0 left-0 right-0 border-b bg-background/80 backdrop-blur-sm">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-4">
-            <ModelSelect value={selectedModel} onChange={setSelectedModel} />
+            <ModelSelect value={selectedModel} onChange={(value: ModelProvider) => setSelectedModel(value)} />
             <Input
               type="password"
-              placeholder="API klíč"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={`API klíč pro ${selectedModel}`}
+              value={apiKeys[selectedModel] || ""}
+              onChange={(e) => handleApiKeyChange(e.target.value)}
               className="w-64"
             />
           </div>

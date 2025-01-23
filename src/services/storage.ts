@@ -1,4 +1,4 @@
-import { Message, Assistant, AgentFlow } from "@/types";
+import { Message, Assistant, AgentFlow, ApiKeys } from "@/types";
 import { STORAGE_KEYS } from "@/lib/storage";
 
 export function saveMessages(messages: Message[]): void {
@@ -28,10 +28,11 @@ export function loadAgentFlows(): AgentFlow[] {
   return flows ? JSON.parse(flows) : [];
 }
 
-export function saveApiKey(key: string): void {
-  localStorage.setItem(STORAGE_KEYS.API_KEY, key);
+export function saveApiKeys(keys: ApiKeys): void {
+  localStorage.setItem(STORAGE_KEYS.API_KEY, JSON.stringify(keys));
 }
 
-export function loadApiKey(): string {
-  return localStorage.getItem(STORAGE_KEYS.API_KEY) || "";
+export function loadApiKeys(): ApiKeys {
+  const keys = localStorage.getItem(STORAGE_KEYS.API_KEY);
+  return keys ? JSON.parse(keys) : {};
 }

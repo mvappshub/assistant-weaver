@@ -5,10 +5,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ModelProvider } from "@/types";
 
 interface ModelSelectProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: ModelProvider;
+  onChange: (value: ModelProvider) => void;
 }
 
 export function ModelSelect({ value, onChange }: ModelSelectProps) {
