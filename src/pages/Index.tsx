@@ -4,7 +4,6 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ModelSelect } from "@/components/ModelSelect";
 import { AssistantManager } from "@/components/AssistantManager";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,6 +15,7 @@ import {
   loadApiKeys,
   saveApiKeys,
   loadAssistants,
+  saveAssistants,
 } from "@/services/storage";
 
 export default function Index() {
@@ -23,6 +23,7 @@ export default function Index() {
   const [selectedModel, setSelectedModel] = useState<ModelProvider>("gemini-pro");
   const [apiKeys, setApiKeys] = useState<ApiKeys>(loadApiKeys());
   const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
@@ -41,6 +42,12 @@ export default function Index() {
     }
   }, [apiKeys]);
 
+  useEffect(() => {
+    if (assistants.length > 0) {
+      saveAssistants(assistants);
+    }
+  }, [assistants]);
+
   const handleSend = async (message: string) => {
     const currentApiKey = apiKeys[selectedModel];
     
@@ -53,16 +60,31 @@ export default function Index() {
       return;
     }
 
-    const newMessage: Message = { role: "user", content: message };
+    const newMessage: Message = { 
+      role: "user", 
+      content: message,
+      agentName: selectedAssistant?.name
+    };
     setMessages((prev) => [...prev, newMessage]);
     setIsProcessing(true);
 
     try {
-      const response = await generateResponse(message, selectedModel, currentApiKey);
+      let systemPrompt = "";
+      if (selectedAssistant) {
+        systemPrompt = selectedAssistant.systemPrompt || "";
+      }
+
+      const response = await generateResponse(
+        message, 
+        selectedModel, 
+        currentApiKey,
+        systemPrompt
+      );
+      
       const assistantMessage: Message = {
         role: "assistant",
         content: response,
-        agentName: selectedModel,
+        agentName: selectedAssistant?.name || selectedModel,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
@@ -82,6 +104,28 @@ export default function Index() {
       ...prev,
       [selectedModel]: value
     }));
+  };
+
+  const handleAssistantSelect = (assistant: Assistant) => {
+    setSelectedAssistant(assistant);
+    setSelectedModel(assistant.model as ModelProvider);
+  };
+
+  const handleAssistantCreate = (assistant: Assistant) => {
+    setAssistants(prev => [...prev, assistant]);
+  };
+
+  const handleAssistantUpdate = (updatedAssistant: Assistant) => {
+    setAssistants(prev => 
+      prev.map(a => a.id === updatedAssistant.id ? updatedAssistant : a)
+    );
+  };
+
+  const handleAssistantDelete = (assistantId: string) => {
+    setAssistants(prev => prev.filter(a => a.id !== assistantId));
+    if (selectedAssistant?.id === assistantId) {
+      setSelectedAssistant(null);
+    }
   };
 
   return (
@@ -105,19 +149,31 @@ export default function Index() {
       <main className="container pt-20 pb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
-            <div className="chat-container">
-              <div className="message-container">
+            <div className="space-y-4">
+              {selectedAssistant && (
+                <div className="bg-secondary/20 p-4 rounded-lg">
+                  <p className="text-sm font-medium">
+                    Aktivní asistent: {selectedAssistant.name}
+                  </p>
+                </div>
+              )}
+              <div className="space-y-4">
                 {messages.map((message, index) => (
                   <ChatMessage key={index} {...message} />
                 ))}
               </div>
-              <div className="input-container">
-                <ChatInput onSend={handleSend} disabled={isProcessing} />
-              </div>
+              <ChatInput onSend={handleSend} disabled={isProcessing} />
             </div>
           </div>
           <div className="space-y-4">
-            <AssistantManager />
+            <AssistantManager
+              assistants={assistants}
+              onSelect={handleAssistantSelect}
+              onCreate={handleAssistantCreate}
+              onUpdate={handleAssistantUpdate}
+              onDelete={handleAssistantDelete}
+              selectedAssistant={selectedAssistant}
+            />
           </div>
         </div>
       </main>
